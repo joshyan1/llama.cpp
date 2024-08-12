@@ -36,6 +36,9 @@ static bool eval_id(struct llama_context * ctx_llama, int id, int * n_past) {
 static bool eval_string(struct llama_context * ctx_llama, const char* str, int n_batch, int * n_past, bool add_bos){
     std::string              str2     = str;
     std::vector<llama_token> embd_inp = ::llama_tokenize(ctx_llama, str2, add_bos, true);
+    embd_inp.push_back(108);
+
+    // embd_inp is the input_ids --> in other words, the tokenized prompt
     eval_tokens(ctx_llama, embd_inp, n_batch, n_past);
     return true;
 }
@@ -183,11 +186,20 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
         }
     }
 
-    eval_string(ctx_llava->ctx_llama, system_prompt.c_str(), params->n_batch, &n_past, true);
-    llava_eval_image_embed(ctx_llava->ctx_llama, image_embed, params->n_batch, &n_past);
-    eval_string(ctx_llava->ctx_llama, user_prompt.c_str(), params->n_batch, &n_past, false);
+    /*  eval_string(ctx_llava->ctx_llama, system_prompt.c_str(), params->n_batch, &n_past, true);
+     llava_eval_image_embed(ctx_llava->ctx_llama, image_embed, params->n_batch, &n_past);
+     eval_string(ctx_llava->ctx_llama, user_prompt.c_str(), params->n_batch, &n_past, false); */
 
+    // build user prompt with 256 image tokens
+    user_prompt = "What is in this image?";
+    std::string image_token_prefix = "";
+    for (int i = 0; i < 256; i++)
+    {
+        image_token_prefix += "<image>";
+    }
+    std::string user_prompt_with_images = image_token_prefix + "<bos>" + user_prompt;
     // generate the response
+    eval_string(ctx_llava->ctx_llama, user_prompt_with_images.c_str(), params->n_batch, &n_past, false);
 
     LOG_TEE("\n");
 
