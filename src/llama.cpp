@@ -2676,7 +2676,7 @@ struct llama_context {
     }
 
     const struct llama_model & model;
-
+    float *image_embeds;
     struct llama_cparams        cparams;
     struct llama_sampling       sampling;
     struct llama_kv_cache       kv_self;
@@ -7823,7 +7823,6 @@ static struct ggml_tensor * llm_build_inp_embd(
     }
 
     cb(inpL, "inp_embd", -1);
-
     return inpL;
 }
 
@@ -8350,6 +8349,89 @@ static struct ggml_tensor * llm_build_kv(
     cb(cur, "kqv_out", il);
 
     return cur;
+}
+
+void log1_tensor(const struct ggml_tensor *tensor)
+{
+    if (tensor == NULL)
+    {
+        printf("Tensor is NULL\n");
+        return;
+    }
+
+    printf("Tensor name: %s\n", tensor->name);
+    printf("Tensor type: ");
+    switch (tensor->type)
+    {
+    case GGML_TYPE_F32:
+        printf("GGML_TYPE_F32\n");
+        break;
+    case GGML_TYPE_F16:
+        printf("GGML_TYPE_F16\n");
+        break;
+    case GGML_TYPE_Q4_0:
+        printf("GGML_TYPE_Q4_0\n");
+        break;
+    case GGML_TYPE_Q4_1:
+        printf("GGML_TYPE_Q4_1\n");
+        break;
+    // Add other types as needed
+    default:
+        printf("Unknown\n");
+    }
+
+    printf("Tensor dimensions: ");
+    for (int i = 0; i < GGML_MAX_DIMS; i++)
+    {
+        if (tensor->ne[i] == 1)
+            break;
+        printf("%ld ", tensor->ne[i]);
+    }
+    printf("\n");
+
+    printf("Tensor data:\n");
+    size_t num_elements = ggml_nelements(tensor);
+    printf("num elements: %d, tensor->data is a pointer of type %p", num_elements, tensor->data);
+    if (tensor->data == NULL)
+    {
+        printf("Tensor data is NULL\n");
+        return;
+    }
+
+    if (ggml_nelements(tensor) == 0)
+    {
+        printf("Tensor has no elements\n");
+        return;
+    }
+    switch (tensor->type)
+    {
+    case GGML_TYPE_F32:
+    {
+        float *data = (float *)tensor->data;
+        for (size_t i = 0; i < num_elements && i < 10; i++)
+        {
+            printf("%f\n", data[i]);
+        }
+    }
+    break;
+    case GGML_TYPE_F16:
+    {
+        ggml_fp16_t *data = (ggml_fp16_t *)tensor->data;
+        for (size_t i = 0; i < num_elements && i < 10; i++)
+        {
+            printf("%f\n", ggml_fp16_to_fp32(data[i]));
+        }
+    }
+    break;
+    // For quantized types, you might need to implement custom printing logic
+    case GGML_TYPE_Q4_0:
+    case GGML_TYPE_Q4_1:
+        printf("Quantized data (not shown)\n");
+        break;
+    default:
+        printf("Unknown data type\n");
+    }
+    printf("\n");
 }
 
 struct llm_build_context {
@@ -11651,6 +11733,7 @@ struct llm_build_context {
     }
 
     struct ggml_cgraph * build_gemma() {
+        LLAMA_LOG_INFO("ENTERING BUILD GEMMA GRAPH\n");
         struct ggml_cgraph * gf = ggml_new_graph_custom(ctx0, llama_model_max_nodes(model), false);
 
         const int64_t n_embd_head_k = hparams.n_embd_head_k;
@@ -11659,6 +11742,13 @@ struct llm_build_context {
         struct ggml_tensor * inpL;
 
         inpL = llm_build_inp_embd(ctx0, lctx, hparams, batch, model.tok_embd, cb);
+        //log1_tensor(inpL);
+
+        /*  if paligemma --> merge inpL with image embeds
+         if (lctx.image_embeds)
+         {
+             inpL = merge_input_embeds_with_image_features(inpL, lctx.image_embeds, batch);
+         } */
 
         inpL = ggml_scale(ctx0, inpL, sqrtf(n_embd));
         cb(inpL, "inp_scaled", -1);

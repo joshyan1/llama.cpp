@@ -33,12 +33,14 @@ static bool eval_id(struct llama_context * ctx_llama, int id, int * n_past) {
     return eval_tokens(ctx_llama, tokens, 1, n_past);
 }
 
-static bool eval_string(struct llama_context * ctx_llama, const char* str, int n_batch, int * n_past, bool add_bos){
+static bool eval_string(struct llama_context *ctx_llama, const char *str, int n_batch, int *n_past, bool add_bos, llava_image_embed *image_embed)
+{
     std::string              str2     = str;
     std::vector<llama_token> embd_inp = ::llama_tokenize(ctx_llama, str2, add_bos, true);
     embd_inp.push_back(108);
 
     // embd_inp is the input_ids --> in other words, the tokenized prompt
+    LOG_TEE("WE ARE EVALING STRING WITH %s", str2.c_str());
     eval_tokens(ctx_llama, embd_inp, n_batch, n_past);
     return true;
 }
@@ -199,9 +201,9 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
     }
     std::string user_prompt_with_images = image_token_prefix + "<bos>" + user_prompt;
     // generate the response
-    eval_string(ctx_llava->ctx_llama, user_prompt_with_images.c_str(), params->n_batch, &n_past, false);
-
+    eval_string(ctx_llava->ctx_llama, user_prompt_with_images.c_str(), params->n_batch, &n_past, false, image_embed);
     LOG_TEE("\n");
+    LOG_TEE("PASSED EVAL STRING, NOW GENERATING OUTPUT");
 
     struct llama_sampling_context * ctx_sampling = llama_sampling_init(params->sparams);
     if (!ctx_sampling) {

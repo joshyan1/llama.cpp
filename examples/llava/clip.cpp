@@ -2253,6 +2253,88 @@ bool clip_image_encode(struct clip_ctx * ctx, const int n_threads, clip_image_f3
     return clip_image_batch_encode(ctx, n_threads, &imgs, vec);
 }
 
+void log_tensor(const struct ggml_tensor *tensor)
+{
+    if (tensor == NULL)
+    {
+        printf("Tensor is NULL\n");
+        return;
+    }
+
+    printf("Tensor name: %s\n", tensor->name);
+    printf("Tensor type: ");
+    switch (tensor->type)
+    {
+    case GGML_TYPE_F32:
+        printf("GGML_TYPE_F32\n");
+        break;
+    case GGML_TYPE_F16:
+        printf("GGML_TYPE_F16\n");
+        break;
+    case GGML_TYPE_Q4_0:
+        printf("GGML_TYPE_Q4_0\n");
+        break;
+    case GGML_TYPE_Q4_1:
+        printf("GGML_TYPE_Q4_1\n");
+        break;
+    // Add other types as needed
+    default:
+        printf("Unknown\n");
+    }
+
+    printf("Tensor dimensions: ");
+    for (int i = 0; i < GGML_MAX_DIMS; i++)
+    {
+        if (tensor->ne[i] == 1)
+            break;
+        printf("%ld ", tensor->ne[i]);
+    }
+    printf("\n");
+
+    printf("Tensor data:\n");
+    size_t num_elements = ggml_nelements(tensor);
+    if (tensor->data == NULL)
+    {
+        printf("Tensor data is NULL\n");
+        return;
+    }
+
+    if (ggml_nelements(tensor) == 0)
+    {
+        printf("Tensor has no elements\n");
+        return;
+    }
+    switch (tensor->type)
+    {
+    case GGML_TYPE_F32:
+    {
+        float *data = (float *)tensor->data;
+        for (size_t i = 0; i < num_elements && i < 10; i++)
+        {
+            printf("%f\n", data[i]);
+        }
+    }
+    break;
+    case GGML_TYPE_F16:
+    {
+        ggml_fp16_t *data = (ggml_fp16_t *)tensor->data;
+        for (size_t i = 0; i < num_elements && i < 10; i++)
+        {
+            printf("%f\n", ggml_fp16_to_fp32(data[i]));
+        }
+    }
+    break;
+    // For quantized types, you might need to implement custom printing logic
+    case GGML_TYPE_Q4_0:
+    case GGML_TYPE_Q4_1:
+        printf("Quantized data (not shown)\n");
+        break;
+    default:
+        printf("Unknown data type\n");
+    }
+    printf("\n");
+}
+
 bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_image_f32_batch * imgs, float * vec) {
     if (!ctx->has_vision_encoder) {
         LOG_TEE("This gguf file seems to have no vision encoder\n");
@@ -2397,6 +2479,9 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
 
     // the last node is the embedding tensor
     struct ggml_tensor * embeddings = gf->nodes[gf->n_nodes - 1];
+    log_tensor(embeddings);
+    printf("\nprint_tensor_info\n");
+    print_tensor_info(embeddings);
 
     // copy the embeddings to the location passed by the user
     ggml_backend_tensor_get(embeddings, vec, 0, ggml_nbytes(embeddings));
