@@ -1374,6 +1374,100 @@ static const std::map<llama_rope_scaling_type, const char *> LLAMA_ROPE_SCALING_
     { LLAMA_ROPE_SCALING_TYPE_YARN,   "yarn"   },
 };
 
+void log1_tensor(const struct ggml_tensor *tensor)
+{
+    if (tensor == NULL)
+    {
+        printf("Tensor is NULL\n");
+        return;
+    }
+
+    printf("Tensor name: %s\n", tensor->name);
+    printf("Tensor type: ");
+    switch (tensor->type)
+    {
+    case GGML_TYPE_F32:
+        printf("GGML_TYPE_F32\n");
+        break;
+    case GGML_TYPE_F16:
+        printf("GGML_TYPE_F16\n");
+        break;
+    case GGML_TYPE_Q4_0:
+        printf("GGML_TYPE_Q4_0\n");
+        break;
+    case GGML_TYPE_Q4_1:
+        printf("GGML_TYPE_Q4_1\n");
+        break;
+    // Add other types as needed
+    default:
+        printf("Unknown\n");
+    }
+
+    /*  printf("Src");
+     if (tensor->view_src != NULL)
+     {
+         //log1_tensor(tensor->view_src);
+     } */
+
+    printf("Tensor dimensions: ");
+    for (int i = 0; i < GGML_MAX_DIMS; i++)
+    {
+        if (tensor->ne[i] == 1)
+            break;
+        printf("%ld ", tensor->ne[i]);
+    }
+    printf("\n");
+
+    printf("Tensor data:\n");
+    size_t num_elements = ggml_nelements(tensor);
+    float *data = ggml_get_data_f32(tensor);
+    if (data == NULL) {
+        printf("DATA IS NULL");
+        return;
+    }
+    printf("num elements: %d, tensor->data is a pointer of type %p", num_elements, tensor->data);
+    /* if (tensor->data == NULL)
+    {
+        printf("Tensor data is NULL\n");
+        return;
+    }
+
+    if (ggml_nelements(tensor) == 0)
+    {
+        printf("Tensor has no elements\n");
+        return;
+    } */
+    switch (tensor->type)
+    {
+    case GGML_TYPE_F32:
+    {
+        // float *data = (float *)tensor->data;
+        for (size_t i = 0; i < num_elements && i < 10; i++)
+        {
+            printf("%f\n", data[i]);
+        }
+    }
+    break;
+    case GGML_TYPE_F16:
+    {
+        // ggml_fp16_t *data = (ggml_fp16_t *)tensor->data;
+        for (size_t i = 0; i < num_elements && i < 10; i++)
+        {
+            printf("%f\n", ggml_fp16_to_fp32(data[i]));
+        }
+    }
+    break;
+    // For quantized types, you might need to implement custom printing logic
+    case GGML_TYPE_Q4_0:
+    case GGML_TYPE_Q4_1:
+        printf("Quantized data (not shown)\n");
+        break;
+    default:
+        printf("Unknown data type\n");
+    }
+    printf("\n");
+}
+
 static llama_rope_scaling_type llama_rope_scaling_type_from_string(const std::string & name) {
     for (const auto & kv : LLAMA_ROPE_SCALING_TYPES) {
         if (kv.second == name) {
@@ -7812,12 +7906,15 @@ static struct ggml_tensor * llm_build_inp_embd(
 
     if (batch.token) {
         lctx.inp_tokens = ggml_new_tensor_1d(ctx, GGML_TYPE_I32, batch.n_tokens);
+        LLAMA_LOG_INFO("inp_tokens");
+        // log1_tensor(lctx.inp_tokens);
         cb(lctx.inp_tokens, "inp_tokens", -1);
-        ggml_set_input(lctx.inp_tokens);
-
+        // ggml_set_input(lctx.inp_tokens);
+        LLAMA_LOG_INFO("get_rows");
         inpL = ggml_get_rows(ctx, tok_embd, lctx.inp_tokens);
     } else {
-       lctx.inp_embd = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, n_embd, batch.n_tokens);
+        LLAMA_LOG_INFO("new_tensor_2d");
+        lctx.inp_embd = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, n_embd, batch.n_tokens);
         inpL = lctx.inp_embd;
         ggml_set_input(lctx.inp_embd);
     }
@@ -8349,89 +8446,6 @@ static struct ggml_tensor * llm_build_kv(
     cb(cur, "kqv_out", il);
 
     return cur;
-}
-
-void log1_tensor(const struct ggml_tensor *tensor)
-{
-    if (tensor == NULL)
-    {
-        printf("Tensor is NULL\n");
-        return;
-    }
-
-    printf("Tensor name: %s\n", tensor->name);
-    printf("Tensor type: ");
-    switch (tensor->type)
-    {
-    case GGML_TYPE_F32:
-        printf("GGML_TYPE_F32\n");
-        break;
-    case GGML_TYPE_F16:
-        printf("GGML_TYPE_F16\n");
-        break;
-    case GGML_TYPE_Q4_0:
-        printf("GGML_TYPE_Q4_0\n");
-        break;
-    case GGML_TYPE_Q4_1:
-        printf("GGML_TYPE_Q4_1\n");
-        break;
-    // Add other types as needed
-    default:
-        printf("Unknown\n");
-    }
-
-    printf("Tensor dimensions: ");
-    for (int i = 0; i < GGML_MAX_DIMS; i++)
-    {
-        if (tensor->ne[i] == 1)
-            break;
-        printf("%ld ", tensor->ne[i]);
-    }
-    printf("\n");
-
-    printf("Tensor data:\n");
-    size_t num_elements = ggml_nelements(tensor);
-    printf("num elements: %d, tensor->data is a pointer of type %p", num_elements, tensor->data);
-    if (tensor->data == NULL)
-    {
-        printf("Tensor data is NULL\n");
-        return;
-    }
-
-    if (ggml_nelements(tensor) == 0)
-    {
-        printf("Tensor has no elements\n");
-        return;
-    }
-    switch (tensor->type)
-    {
-    case GGML_TYPE_F32:
-    {
-        float *data = (float *)tensor->data;
-        for (size_t i = 0; i < num_elements && i < 10; i++)
-        {
-            printf("%f\n", data[i]);
-        }
-    }
-    break;
-    case GGML_TYPE_F16:
-    {
-        ggml_fp16_t *data = (ggml_fp16_t *)tensor->data;
-        for (size_t i = 0; i < num_elements && i < 10; i++)
-        {
-            printf("%f\n", ggml_fp16_to_fp32(data[i]));
-        }
-    }
-    break;
-    // For quantized types, you might need to implement custom printing logic
-    case GGML_TYPE_Q4_0:
-    case GGML_TYPE_Q4_1:
-        printf("Quantized data (not shown)\n");
-        break;
-    default:
-        printf("Unknown data type\n");
-    }
-    printf("\n");
 }
 
 struct llm_build_context {
@@ -11733,7 +11747,8 @@ struct llm_build_context {
     }
 
     struct ggml_cgraph * build_gemma() {
-        LLAMA_LOG_INFO("ENTERING BUILD GEMMA GRAPH\n");
+        // LLAMA_LOG_INFO("\n\n\n\n\nEntering build_gemma\n");
+        // LLAMA_LOG_INFO("This means inpL is embedded how many times?");
         struct ggml_cgraph * gf = ggml_new_graph_custom(ctx0, llama_model_max_nodes(model), false);
 
         const int64_t n_embd_head_k = hparams.n_embd_head_k;
@@ -11742,7 +11757,7 @@ struct llm_build_context {
         struct ggml_tensor * inpL;
 
         inpL = llm_build_inp_embd(ctx0, lctx, hparams, batch, model.tok_embd, cb);
-        //log1_tensor(inpL);
+        log1_tensor(inpL);
 
         /*  if paligemma --> merge inpL with image embeds
          if (lctx.image_embeds)
