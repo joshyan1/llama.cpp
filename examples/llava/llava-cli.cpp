@@ -38,13 +38,14 @@ static bool eval_string(struct llama_context *ctx_llama, const char *str, int n_
     std::string              str2     = str;
     std::vector<llama_token> embd_inp = ::llama_tokenize(ctx_llama, str2, add_bos, true);
     embd_inp.push_back(108);
-    for (int i = 0; i < 264; i++)
+    /* for (int i = 0; i < 264; i++)
     {
         printf("token %d: %d\n", i, embd_inp[i]);
-    }
+    } */
 
     // embd_inp is the input_ids --> in other words, the tokenized prompt
     LOG_TEE("WE ARE EVALING STRING WITH %s", str2.c_str());
+    printf("n_batch: %d, n_past: %d\n", n_batch, *n_past);
     eval_tokens(ctx_llama, embd_inp, n_batch, n_past);
     return true;
 }
@@ -229,10 +230,12 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
     std::string response = "";
     for (int i = 0; i < max_tgt_len; i++) {
         printf("generating response\n");
+        printf("n_past: %d\n", n_past);
         const char * tmp = sample(ctx_sampling, ctx_llava->ctx_llama, &n_past);
         response += tmp;
         printf("temp is %s\n", tmp);
-        // if (strcmp(tmp, "</s>") == 0) break;
+        if (strcmp(tmp, "</s>") == 0)
+            break;
         if (strstr(tmp, "###")) break; // Yi-VL behavior
         printf("%s", tmp);
         if (strstr(response.c_str(), "<|im_end|>")) break; // Yi-34B llava-1.6 - for some reason those decode not as the correct token (tokenizer works)

@@ -14836,6 +14836,7 @@ static int llama_decode_internal(
         struct ggml_tensor * res  = gf->nodes[gf->n_nodes - 1];
         struct ggml_tensor * embd = gf->nodes[gf->n_nodes - 2];
         printf("lctx.n_outputs %d \n", lctx.n_outputs);
+        log1_tensor(res);
 
         if (lctx.n_outputs == 0) {
             // no output
@@ -14862,6 +14863,7 @@ static int llama_decode_internal(
         llama_set_inputs(lctx, u_batch);
 
         llama_graph_compute(lctx, gf, n_threads);
+        log1_tensor(res);
 
         // update the kv ring buffer
         {
