@@ -342,6 +342,8 @@ int main(int argc, char ** argv) {
                 return 1;
             }
 
+            set_image_embeds(ctx_llava->ctx_llama, image_embed->embed);
+
             // process the prompt
             process_prompt(ctx_llava, image_embed, &params, params.prompt);
 

@@ -2915,6 +2915,11 @@ static size_t llama_get_device_count(const llama_model & model) {
     GGML_UNUSED(model);
 }
 
+void set_image_embeds(llama_context *ctx, float *data)
+{
+    ctx->image_embeds = data;
+}
+
 static ggml_backend_buffer_type_t llama_default_buffer_type_offload(const llama_model & model, int gpu) {
     ggml_backend_buffer_type_t buft = nullptr;
 
@@ -7909,7 +7914,7 @@ static struct ggml_tensor * llm_build_inp_embd(
         LLAMA_LOG_INFO("inp_tokens");
         // log1_tensor(lctx.inp_tokens);
         cb(lctx.inp_tokens, "inp_tokens", -1);
-        // ggml_set_input(lctx.inp_tokens);
+        ggml_set_input(lctx.inp_tokens);
         LLAMA_LOG_INFO("get_rows");
         inpL = ggml_get_rows(ctx, tok_embd, lctx.inp_tokens);
     } else {
@@ -11757,7 +11762,15 @@ struct llm_build_context {
         struct ggml_tensor * inpL;
 
         inpL = llm_build_inp_embd(ctx0, lctx, hparams, batch, model.tok_embd, cb);
-        log1_tensor(inpL);
+        if (lctx.image_embeds)
+        {
+            struct ggml_tensor *image_embeds = ggml_dup_tensor(ctx0, inpL);
+            image_embeds->data = lctx.image_embeds;
+            image_embeds->ne[1] = 256;
+            inpL = ggml_set_2d_inplace(ctx0, inpL, image_embeds, inpL->nb[1], 0);
+            log1_tensor(image_embeds);
+            log1_tensor(inpL);
+        }
 
         /*  if paligemma --> merge inpL with image embeds
          if (lctx.image_embeds)

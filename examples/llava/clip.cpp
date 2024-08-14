@@ -2479,7 +2479,7 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
 
     // the last node is the embedding tensor
     struct ggml_tensor * embeddings = gf->nodes[gf->n_nodes - 1];
-    // log_tensor(embeddings);
+    log_tensor(embeddings);
     printf("\nprint_tensor_info\n");
     print_tensor_info(embeddings);
 
