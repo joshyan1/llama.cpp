@@ -1923,7 +1923,18 @@ inline static void ggml_vec_acc_f32 (const int n, float * y, const float * x)   
 inline static void ggml_vec_acc1_f32(const int n, float * y, const float   v)                  { for (int i = 0; i < n; ++i) y[i] += v;           }
 inline static void ggml_vec_sub_f32 (const int n, float * z, const float * x, const float * y) { for (int i = 0; i < n; ++i) z[i]  = x[i] - y[i]; }
 inline static void ggml_vec_set_f32 (const int n, float * x, const float   v)                  { for (int i = 0; i < n; ++i) x[i]  = v;           }
-inline static void ggml_vec_cpy_f32 (const int n, float * y, const float * x)                  { for (int i = 0; i < n; ++i) y[i]  = x[i];        }
+inline static void ggml_vec_cpy_f32(const int n, float *y, const float *x)
+{
+    // printf("%d\n", n);
+    for (int i = 0; i < n; ++i)
+    {
+        if (i < 10)
+        {
+            // printf("old placeholder %f new data %f\n", y[i], x[i]);
+        }
+        y[i] = x[i];
+    }
+}
 inline static void ggml_vec_neg_f32 (const int n, float * y, const float * x)                  { for (int i = 0; i < n; ++i) y[i]  = -x[i];       }
 inline static void ggml_vec_mul_f32 (const int n, float * z, const float * x, const float * y) { for (int i = 0; i < n; ++i) z[i]  = x[i]*y[i];   }
 inline static void ggml_vec_div_f32 (const int n, float * z, const float * x, const float * y) { for (int i = 0; i < n; ++i) z[i]  = x[i]/y[i];   }
@@ -13012,9 +13023,10 @@ static void ggml_compute_forward_scale(
 // ggml_compute_forward_set
 
 static void ggml_compute_forward_set_f32(
-        const struct ggml_compute_params * params,
-        struct ggml_tensor * dst) {
-
+    const struct ggml_compute_params *params,
+    struct ggml_tensor *dst)
+{
+    printf("computing forward setf32\n");
     const struct ggml_tensor * src0 = dst->src[0];
     const struct ggml_tensor * src1 = dst->src[1];
 
@@ -13027,6 +13039,7 @@ static void ggml_compute_forward_set_f32(
     size_t nb2     = ((int32_t *) dst->op_params)[1];
     size_t nb3     = ((int32_t *) dst->op_params)[2];
     size_t offset  = ((int32_t *) dst->op_params)[3];
+    printf("nb1 %d, nb2 %d, nb3 %d, offset %d\n", nb1, nb2, nb3, offset);
     bool   inplace = (bool) ((int32_t *) dst->op_params)[4];
 
     if (!inplace) {
@@ -13064,11 +13077,13 @@ static void ggml_compute_forward_set_f32(
 
     // rows per thread
     const int dr = (nr + nth - 1)/nth;
+    printf("this is dr %d\n", dr);
 
     // row range for this thread
     const int ir0 = dr*ith;
     const int ir1 = MIN(ir0 + dr, nr);
-
+    printf("row ranges ir: %d, ir1: %d\n", ir0, ir1);
+    printf("have we populated data at this point? dst->data = %p", dst->data);
     for (int ir = ir0; ir < ir1; ++ir) {
         // src0 and dst are viewed with shape of src1 and offset
         // => same indices

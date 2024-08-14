@@ -1421,11 +1421,12 @@ void log1_tensor(const struct ggml_tensor *tensor)
     printf("Tensor data:\n");
     size_t num_elements = ggml_nelements(tensor);
     float *data = ggml_get_data_f32(tensor);
+    printf("num elements: %d, tensor->data is a pointer of type %p", num_elements, tensor->data);
+
     if (data == NULL) {
         printf("DATA IS NULL");
         return;
     }
-    printf("num elements: %d, tensor->data is a pointer of type %p", num_elements, tensor->data);
     /* if (tensor->data == NULL)
     {
         printf("Tensor data is NULL\n");
@@ -7911,11 +7912,11 @@ static struct ggml_tensor * llm_build_inp_embd(
 
     if (batch.token) {
         lctx.inp_tokens = ggml_new_tensor_1d(ctx, GGML_TYPE_I32, batch.n_tokens);
-        LLAMA_LOG_INFO("inp_tokens");
-        // log1_tensor(lctx.inp_tokens);
+        // LLAMA_LOG_INFO("inp_tokens");
+        //  log1_tensor(lctx.inp_tokens);
         cb(lctx.inp_tokens, "inp_tokens", -1);
         ggml_set_input(lctx.inp_tokens);
-        LLAMA_LOG_INFO("get_rows");
+        // LLAMA_LOG_INFO("get_rows");
         inpL = ggml_get_rows(ctx, tok_embd, lctx.inp_tokens);
     } else {
         LLAMA_LOG_INFO("new_tensor_2d");
@@ -11767,14 +11768,18 @@ struct llm_build_context {
             struct ggml_tensor *image_embeds = ggml_dup_tensor(ctx0, inpL);
             image_embeds->data = lctx.image_embeds;
             image_embeds->ne[1] = 256;
+            log1_tensor(inpL);
+            log1_tensor(image_embeds);
+
             inpL = ggml_set_2d_inplace(ctx0, inpL, image_embeds, inpL->nb[1], 0);
             log1_tensor(image_embeds);
             log1_tensor(inpL);
+            lctx.image_embeds = NULL;
         }
 
         /*  if paligemma --> merge inpL with image embeds
          if (lctx.image_embeds)
-         {
+         {x
              inpL = merge_input_embeds_with_image_features(inpL, lctx.image_embeds, batch);
          } */
 
