@@ -212,9 +212,10 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
     // generate the response
     llama_set_causal_attn(ctx_llava->ctx_llama, false);
     eval_string(ctx_llava->ctx_llama, user_prompt_with_images.c_str(), params->n_batch, &n_past, false, image_embed);
+    llama_kv_cache_update(ctx_llava->ctx_llama);
     // llava_eval_image_embed(ctx_llava->ctx_llama, image_embed, params->n_batch, &n_past);
     // eval_string(ctx_llava->ctx_llama, user_prompt.c_str(), params->n_batch, &n_past, false, image_embed);
-    //  eval_string(ctx_llava->ctx_llama, user_prompt_with_images.c_str(), params->n_batch, &n_past, false, image_embed);
+    // eval_string(ctx_llava->ctx_llama, "Hello,", params->n_batch, &n_past, false, image_embed);
     LOG_TEE("\n");
     LOG_TEE("PASSED EVAL STRING, NOW GENERATING OUTPUT\n");
     llama_set_causal_attn(ctx_llava->ctx_llama, true);

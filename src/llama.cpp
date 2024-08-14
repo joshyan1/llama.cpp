@@ -1421,7 +1421,7 @@ void log1_tensor(const struct ggml_tensor *tensor)
     printf("Tensor data:\n");
     size_t num_elements = ggml_nelements(tensor);
     float *data = ggml_get_data_f32(tensor);
-    printf("num elements: %d, tensor->data is a pointer of type %p", num_elements, tensor->data);
+    printf("num elements: %d, tensor->data is a pointer of type %p\n", num_elements, tensor->data);
 
     if (data == NULL) {
         printf("DATA IS NULL");
@@ -14863,6 +14863,7 @@ static int llama_decode_internal(
         llama_set_inputs(lctx, u_batch);
 
         llama_graph_compute(lctx, gf, n_threads);
+        printf("\n");
         log1_tensor(res);
 
         // update the kv ring buffer
