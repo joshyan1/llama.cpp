@@ -14801,7 +14801,8 @@ static int llama_decode_internal(
         }
 
         // non-causal masks do not use the KV cache
-        if (hparams.causal_attn) {
+        if (hparams.causal_attn || lctx.image_embeds)
+        {
             llama_kv_cache_update(&lctx);
 
             // if we have enough unused cells before the current head ->
@@ -14834,6 +14835,7 @@ static int llama_decode_internal(
         // the output is always the last tensor in the graph
         struct ggml_tensor * res  = gf->nodes[gf->n_nodes - 1];
         struct ggml_tensor * embd = gf->nodes[gf->n_nodes - 2];
+        printf("lctx.n_outputs %d \n", lctx.n_outputs);
 
         if (lctx.n_outputs == 0) {
             // no output
@@ -14878,6 +14880,7 @@ static int llama_decode_internal(
 
         // extract logits
         if (res) {
+            printf("ressing");
             ggml_backend_t backend_res = ggml_backend_sched_get_tensor_backend(lctx.sched, res);
             GGML_ASSERT(backend_res != nullptr);
             GGML_ASSERT(lctx.logits != nullptr);

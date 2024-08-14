@@ -13083,7 +13083,7 @@ static void ggml_compute_forward_set_f32(
     const int ir0 = dr*ith;
     const int ir1 = MIN(ir0 + dr, nr);
     printf("row ranges ir: %d, ir1: %d\n", ir0, ir1);
-    printf("have we populated data at this point? dst->data = %p", dst->data);
+    printf("have we populated data at this point? dst->data = %p\n", dst->data);
     for (int ir = ir0; ir < ir1; ++ir) {
         // src0 and dst are viewed with shape of src1 and offset
         // => same indices
