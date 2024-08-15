@@ -2677,6 +2677,7 @@ struct llama_context {
 
     const struct llama_model & model;
 
+    float *image_embeds;
     struct llama_cparams        cparams;
     struct llama_sampling       sampling;
     struct llama_kv_cache       kv_self;
@@ -2759,6 +2760,10 @@ struct llama_context {
     struct ggml_tensor * inp_embd_enc;      // F32 [n_embd, n_outputs_enc]
     struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
 };
+
+void set_image_embeds(llama_context *ctx, float *data) {
+    ctx->image_embeds = data;
+}
 
 struct llama_lora_weight {
     struct ggml_tensor * a = nullptr;
@@ -11660,6 +11665,15 @@ struct llm_build_context {
 
         inpL = llm_build_inp_embd(ctx0, lctx, hparams, batch, model.tok_embd, cb);
 
+        // set the image embeddings in the input tensor
+        if (lctx.image_embeds) {
+            struct ggml_tensor *image_embeds = ggml_dup_tensor(ctx0, inpL);
+            image_embeds->data = lctx.image_embeds;
+            image_embeds->ne[1] = 256;
+            inpL = ggml_set_2d_inplace(ctx0, inpL, image_embeds, inpL->nb[1], 0);
+            lctx.image_embeds = NULL;
+        }
+
         inpL = ggml_scale(ctx0, inpL, sqrtf(n_embd));
         cb(inpL, "inp_scaled", -1);
 
@@ -14678,7 +14692,7 @@ static int llama_decode_internal(
         }
 
         // non-causal masks do not use the KV cache
-        if (hparams.causal_attn) {
+        if (hparams.causal_attn || lctx.image_embeds) {
             llama_kv_cache_update(&lctx);
 
             // if we have enough unused cells before the current head ->

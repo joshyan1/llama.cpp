@@ -444,6 +444,9 @@ extern "C" {
     // Frees all allocated memory
     LLAMA_API void llama_free(struct llama_context * ctx);
 
+    // save image embeddings
+    LLAMA_API void set_image_embeds(struct llama_context *ctx, float *data);
+
     LLAMA_API int64_t llama_time_us(void);
 
     LLAMA_API size_t llama_max_devices(void);
