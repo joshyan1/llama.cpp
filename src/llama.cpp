@@ -1443,9 +1443,17 @@ void log1_tensor(const struct ggml_tensor *tensor)
     case GGML_TYPE_F32:
     {
         // float *data = (float *)tensor->data;
-        for (size_t i = 0; i < num_elements && i < 10; i++)
+        for (size_t i = 0; i < num_elements && i < 15; i++)
         {
             printf("%f\n", data[i]);
+        }
+
+        if (num_elements > 256 * 2048)
+        {
+            for (size_t i = 0; i < num_elements && i < 15; i++)
+            {
+                printf("%f\n", data[256 * 2048 + i]);
+            }
         }
     }
     break;
@@ -1455,6 +1463,10 @@ void log1_tensor(const struct ggml_tensor *tensor)
         for (size_t i = 0; i < num_elements && i < 10; i++)
         {
             printf("%f\n", ggml_fp16_to_fp32(data[i]));
+        }
+
+        for (size_t i = 0; i < 10; i++)
+        {
         }
     }
     break;
@@ -7926,6 +7938,7 @@ static struct ggml_tensor * llm_build_inp_embd(
     }
 
     cb(inpL, "inp_embd", -1);
+    ggml_set_name(inpL, "input_embeds");
     return inpL;
 }
 
@@ -11765,15 +11778,17 @@ struct llm_build_context {
         inpL = llm_build_inp_embd(ctx0, lctx, hparams, batch, model.tok_embd, cb);
         if (lctx.image_embeds)
         {
+            printf("merging image embeds\n");
             struct ggml_tensor *image_embeds = ggml_dup_tensor(ctx0, inpL);
             image_embeds->data = lctx.image_embeds;
             image_embeds->ne[1] = 256;
-            log1_tensor(inpL);
-            log1_tensor(image_embeds);
+            ggml_set_name(image_embeds, "image_embeddings");
+            // log1_tensor(inpL);
+            // log1_tensor(image_embeds);
 
             inpL = ggml_set_2d_inplace(ctx0, inpL, image_embeds, inpL->nb[1], 0);
-            log1_tensor(image_embeds);
-            log1_tensor(inpL);
+            // log1_tensor(image_embeds);
+            // log1_tensor(inpL);
             lctx.image_embeds = NULL;
         }
 
@@ -11784,6 +11799,9 @@ struct llm_build_context {
          } */
 
         inpL = ggml_scale(ctx0, inpL, sqrtf(n_embd));
+        // printf("inputL post scale\n");
+        // log1_tensor(inpL);
+
         cb(inpL, "inp_scaled", -1);
 
         // inp_pos - contains the positions
@@ -11877,6 +11895,7 @@ struct llm_build_context {
         cb(cur, "result_output", -1);
 
         ggml_build_forward_expand(gf, cur);
+        // printf("after build forward\n");
 
         return gf;
     }
@@ -14830,13 +14849,22 @@ static int llama_decode_internal(
         ggml_backend_sched_reset(lctx.sched);
         ggml_backend_sched_set_eval_callback(lctx.sched, lctx.cparams.cb_eval, lctx.cparams.cb_eval_user_data);
 
+        bool dot = false;
+        if (lctx.image_embeds)
+        {
+            dot = true;
+        }
         ggml_cgraph * gf = llama_build_graph(lctx, u_batch, false);
+        if (dot)
+        {
+            // ggml_graph_dump_dot(gf, NULL, "pali1.dot");
+        }
 
         // the output is always the last tensor in the graph
         struct ggml_tensor * res  = gf->nodes[gf->n_nodes - 1];
         struct ggml_tensor * embd = gf->nodes[gf->n_nodes - 2];
-        printf("lctx.n_outputs %d \n", lctx.n_outputs);
-        log1_tensor(res);
+        // printf("lctx.n_outputs %d \n", lctx.n_outputs);
+        // log1_tensor(res);
 
         if (lctx.n_outputs == 0) {
             // no output
@@ -14863,8 +14891,9 @@ static int llama_decode_internal(
         llama_set_inputs(lctx, u_batch);
 
         llama_graph_compute(lctx, gf, n_threads);
-        printf("\n");
-        log1_tensor(res);
+        // printf("\n");
+        // log1_tensor(res);
+        // ggml_graph_dump_dot(gf, NULL, "pali.dot");
 
         // update the kv ring buffer
         {
@@ -14883,7 +14912,7 @@ static int llama_decode_internal(
 
         // extract logits
         if (res) {
-            printf("ressing");
+            // printf("ressing");
             ggml_backend_t backend_res = ggml_backend_sched_get_tensor_backend(lctx.sched, res);
             GGML_ASSERT(backend_res != nullptr);
             GGML_ASSERT(lctx.logits != nullptr);

@@ -2352,6 +2352,7 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
     // build the inference graph
     ggml_cgraph * gf = clip_image_build_graph(ctx, imgs, ctx->load_image_size, true);
     ggml_gallocr_alloc_graph(ctx->compute_alloc, gf);
+    // ggml_graph_dump_dot(gf, NULL, "siglip");
 
     // set inputs
     const auto & model = ctx->vision_model;
@@ -2479,12 +2480,14 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
 
     // the last node is the embedding tensor
     struct ggml_tensor * embeddings = gf->nodes[gf->n_nodes - 1];
-    log_tensor(embeddings);
-    printf("\nprint_tensor_info\n");
-    print_tensor_info(embeddings);
+    // log_tensor(embeddings);
+    // printf("\nprint_tensor_info\n");
+    // print_tensor_info(embeddings);
 
     // copy the embeddings to the location passed by the user
     ggml_backend_tensor_get(embeddings, vec, 0, ggml_nbytes(embeddings));
+    printf("tensor loaded");
+    // vec = (float *)embeddings->data;
 
     return true;
 }

@@ -53,12 +53,12 @@ static bool eval_string(struct llama_context *ctx_llama, const char *str, int n_
 static const char * sample(struct llama_sampling_context * ctx_sampling,
                            struct llama_context * ctx_llama,
                            int * n_past) {
-    printf("before llama_sampling_sample\n");
+    // printf("before llama_sampling_sample\n");
     const llama_token id = llama_sampling_sample(ctx_sampling, ctx_llama, NULL);
-    printf("id is %d", id);
+    // printf("id is %d", id);
     llama_sampling_accept(ctx_sampling, ctx_llama, id, true);
     static std::string ret;
-
+    printf("%d\n", id);
     if (llama_token_is_eog(llama_get_model(ctx_llama), id)) {
         ret = "</s>";
     } else {
@@ -202,7 +202,7 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
      eval_string(ctx_llava->ctx_llama, user_prompt.c_str(), params->n_batch, &n_past, false); */
 
     // build user prompt with 256 image tokens
-    user_prompt = "What is in this image?";
+    user_prompt = "What kind of puppy is this?";
     std::string image_token_prefix = "";
     for (int i = 0; i < 256; i++)
     {
@@ -210,7 +210,6 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
     }
     std::string user_prompt_with_images = image_token_prefix + "<bos>" + user_prompt;
     // generate the response
-    llama_set_causal_attn(ctx_llava->ctx_llama, false);
     eval_string(ctx_llava->ctx_llama, user_prompt_with_images.c_str(), params->n_batch, &n_past, false, image_embed);
     llama_kv_cache_update(ctx_llava->ctx_llama);
     // llava_eval_image_embed(ctx_llava->ctx_llama, image_embed, params->n_batch, &n_past);
@@ -218,7 +217,6 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
     // eval_string(ctx_llava->ctx_llama, "Hello,", params->n_batch, &n_past, false, image_embed);
     LOG_TEE("\n");
     LOG_TEE("PASSED EVAL STRING, NOW GENERATING OUTPUT\n");
-    llama_set_causal_attn(ctx_llava->ctx_llama, true);
 
     struct llama_sampling_context *ctx_sampling = llama_sampling_init(params->sparams);
     printf("passed sampling\n");
@@ -230,11 +228,11 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
 
     std::string response = "";
     for (int i = 0; i < max_tgt_len; i++) {
-        printf("generating response\n");
-        printf("n_past: %d\n", n_past);
+        // printf("generating response\n");
+        // printf("n_past: %d\n", n_past);
         const char * tmp = sample(ctx_sampling, ctx_llava->ctx_llama, &n_past);
         response += tmp;
-        printf("temp is %s\n", tmp);
+        // printf("temp is %s\n", tmp);
         if (strcmp(tmp, "</s>") == 0)
             break;
         if (strstr(tmp, "###")) break; // Yi-VL behavior
@@ -352,13 +350,38 @@ int main(int argc, char ** argv) {
     } else {
         for (auto & image : params.image) {
             auto ctx_llava = llava_init_context(&params, model);
-
+            printf("loaded i");
             auto image_embed = load_image(ctx_llava, &params, image);
             if (!image_embed) {
                 std::cerr << "error: failed to load image " << image << ". Terminating\n\n";
                 return 1;
             }
 
+            if (!image_embed || !image_embed->embed)
+            {
+                std::cerr << "Error: image_embed or image_embed->embed is null." << std::endl;
+                return 1;
+            }
+
+            printf("loading data");
+
+            float *data = image_embed->embed;
+            FILE *inputFile = fopen("examples/llava/output.txt", "r");
+
+            if (!inputFile)
+            {
+                std::cerr << "Error: Failed to open file output.txt" << std::endl;
+                return 1;
+            }
+
+            int i = 0;
+            while (i < 2048 * 256 && fscanf(inputFile, "%f", &data[i]) == 1)
+            {
+                i++;
+            }
+
+            // Close the file
+            fclose(inputFile);
             set_image_embeds(ctx_llava->ctx_llama, image_embed->embed);
 
             // process the prompt
