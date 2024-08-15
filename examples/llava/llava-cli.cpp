@@ -185,7 +185,7 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
     }
 
     // build user prompt with 256 image tokens
-    user_prompt = "caption en";
+    user_prompt = "What is this image";
     std::string image_token_prefix = "";
     for (int i = 0; i < 256; i++)
     {
