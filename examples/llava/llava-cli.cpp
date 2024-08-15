@@ -193,9 +193,9 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
     }
     std::string user_prompt_with_images = image_token_prefix + "<bos>" + user_prompt;
 
-    // llama_set_causal_attn(ctx_llava->ctx_llama, false);
+    llama_set_causal_attn(ctx_llava->ctx_llama, false);
     eval_string(ctx_llava->ctx_llama, user_prompt_with_images.c_str(), params->n_batch, &n_past, false);
-    // llama_set_causal_attn(ctx_llava->ctx_llama, true);
+    llama_set_causal_attn(ctx_llava->ctx_llama, true);
 
     // generate the response
 
