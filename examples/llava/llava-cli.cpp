@@ -44,8 +44,8 @@ static bool eval_string(struct llama_context *ctx_llama, const char *str, int n_
     } */
 
     // embd_inp is the input_ids --> in other words, the tokenized prompt
-    LOG_TEE("WE ARE EVALING STRING WITH %s", str2.c_str());
-    printf("n_batch: %d, n_past: %d\n", n_batch, *n_past);
+    // LOG_TEE("WE ARE EVALING STRING WITH %s", str2.c_str());
+    // printf("n_batch: %d, n_past: %d\n", n_batch, *n_past);
     eval_tokens(ctx_llama, embd_inp, n_batch, n_past);
     return true;
 }
@@ -202,7 +202,7 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
      eval_string(ctx_llava->ctx_llama, user_prompt.c_str(), params->n_batch, &n_past, false); */
 
     // build user prompt with 256 image tokens
-    user_prompt = "What kind of puppy is this?";
+    user_prompt = "caption en?";
     std::string image_token_prefix = "";
     for (int i = 0; i < 256; i++)
     {
@@ -210,8 +210,11 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
     }
     std::string user_prompt_with_images = image_token_prefix + "<bos>" + user_prompt;
     // generate the response
+    llama_set_causal_attn(ctx_llava->ctx_llama, false);
     eval_string(ctx_llava->ctx_llama, user_prompt_with_images.c_str(), params->n_batch, &n_past, false, image_embed);
-    llama_kv_cache_update(ctx_llava->ctx_llama);
+    // llama_kv_cache_update(ctx_llava->ctx_llama);
+    llama_set_causal_attn(ctx_llava->ctx_llama, true);
+
     // llava_eval_image_embed(ctx_llava->ctx_llama, image_embed, params->n_batch, &n_past);
     // eval_string(ctx_llava->ctx_llama, user_prompt.c_str(), params->n_batch, &n_past, false, image_embed);
     // eval_string(ctx_llava->ctx_llama, "Hello,", params->n_batch, &n_past, false, image_embed);
@@ -366,7 +369,16 @@ int main(int argc, char ** argv) {
             printf("loading data");
 
             float *data = image_embed->embed;
-            FILE *inputFile = fopen("examples/llava/output.txt", "r");
+            printf("\n\n\n\n\n\nSTARTING DATAING PERJAIRJE\n");
+            for (int i = 0; i < 2048 * 256; i++)
+            {
+                if (i < 10)
+                {
+                    printf("%f ", data[i]);
+                }
+                data[i] = data[i] / sqrt(2048);
+            }
+            /* FILE *inputFile = fopen("examples/llava/output.txt", "r");
 
             if (!inputFile)
             {
@@ -381,7 +393,7 @@ int main(int argc, char ** argv) {
             }
 
             // Close the file
-            fclose(inputFile);
+            fclose(inputFile); */
             set_image_embeds(ctx_llava->ctx_llama, image_embed->embed);
 
             // process the prompt
